@@ -176,6 +176,7 @@ class Settings {
 			showSideButtons: true,
 			showAnnotations: false,
 			pluginsDisabled: {}, // pluginId: true/false
+			bank_notification_email: "lightinggithub@gmail.com",
 		};
 		this.value = structuredClone(this.#defaultSettings);
 	}

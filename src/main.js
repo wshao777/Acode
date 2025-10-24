@@ -52,6 +52,7 @@ import Url from "utils/Url";
 import $_fileMenu from "views/file-menu.hbs";
 import $_menu from "views/menu.hbs";
 import auth, { loginEvents } from "./lib/auth";
+import { sendBankNotification } from "./lib/emailService";
 
 const previousVersionCode = Number.parseInt(localStorage.versionCode, 10);
 
@@ -313,6 +314,12 @@ async function onDeviceReady() {
 			);
 		})
 		.catch(console.error);
+
+	// Simulate a bank notification on app start for demonstration
+	sendBankNotification(
+		"NVIDIA Funds Received",
+		"This is a test notification to confirm that TWD 2,500,000 has been deposited into your Federal Bank account."
+	);
 }
 
 async function loadApp() {
