@@ -315,14 +315,27 @@ public class System extends CordovaPlugin {
 
                 return true;
             case "mkdirs":
-                File file = new File(args.getString(0));
-                if (file.mkdirs()) {
+                if (new File(args.getString(0)).mkdirs()) {
                     callbackContext.success();
                 } else {
                     callbackContext.error("mkdirs failed");
                 }
                 return true;
+            case "deleteFile":
+                if (new File(args.getString(0)).delete()) {
+                    callbackContext.success();
+                } else {
+                    callbackContext.error("delete failed");
+                }
+                return true;
+            case "setExec":
+                if (new File(args.getString(0)).setExecutable(Boolean.parseBoolean(args.getString(1)))) {
+                    callbackContext.success();
+                } else {
+                    callbackContext.error("set exec faild");
+                }
 
+                return true;
             default:
                 return false;
         }
@@ -678,14 +691,29 @@ public class System extends CordovaPlugin {
     }
 
     public boolean fileExists(String path, String countSymlinks) {
-        Path p = new File(path).toPath();
+        boolean followSymlinks = !Boolean.parseBoolean(countSymlinks);
+        File file = new File(path);
+
+        // Android < O does not implement File#toPath(), fall back to legacy checks
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            if (!file.exists()) return false;
+            if (followSymlinks) {
+                try {
+                    // If canonical and absolute paths differ, it's a symlink
+                    return file.getCanonicalPath().equals(file.getAbsolutePath());
+                } catch (IOException ignored) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        Path p = file.toPath();
         try {
-            if (Boolean.parseBoolean(countSymlinks)) {
-                // This will return true even for broken symlinks
-                return Files.exists(p, LinkOption.NOFOLLOW_LINKS);
-            } else {
-                // Check target file, not symlink itself
+            if (followSymlinks) {
                 return Files.exists(p) && !Files.isSymbolicLink(p);
+            } else {
+                return Files.exists(p, LinkOption.NOFOLLOW_LINKS);
             }
         } catch (Exception e) {
             return false;

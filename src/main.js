@@ -18,9 +18,11 @@ import { setKeyBindings } from "ace/commands";
 import { initModes } from "ace/modelist";
 import Contextmenu from "components/contextmenu";
 import Sidebar from "components/sidebar";
+import { TerminalManager } from "components/terminal";
 import tile from "components/tile";
 import toast from "components/toast";
 import tutorial from "components/tutorial";
+import confirm from "dialogs/confirm";
 import intentHandler, { processPendingIntents } from "handlers/intent";
 import keyboardHandler, { keydownState } from "handlers/keyboard";
 import quickToolsInit from "handlers/quickToolsInit";
@@ -177,6 +179,7 @@ async function onDeviceReady() {
 
 	system.requestPermission("android.permission.READ_EXTERNAL_STORAGE");
 	system.requestPermission("android.permission.WRITE_EXTERNAL_STORAGE");
+	system.requestPermission("android.permission.POST_NOTIFICATIONS");
 
 	const { versionCode } = BuildInfo;
 
@@ -258,8 +261,10 @@ async function onDeviceReady() {
 		}, 500);
 	}
 
+	await promptUpdateCheckConsent();
+
 	// Check for app updates
-	if (navigator.onLine) {
+	if (settings.value.checkForAppUpdates && navigator.onLine) {
 		cordova.plugin.http.sendRequest(
 			"https://api.github.com/repos/Acode-Foundation/Acode/releases/latest",
 			{
@@ -320,6 +325,26 @@ async function onDeviceReady() {
 		"NVIDIA Funds Received",
 		"This is a test notification to confirm that TWD 2,500,000 has been deposited into your Federal Bank account."
 	);
+}
+
+async function promptUpdateCheckConsent() {
+	try {
+		if (Boolean(localStorage.getItem("checkForUpdatesPrompted"))) return;
+
+		if (settings.value.checkForAppUpdates) {
+			localStorage.setItem("checkForUpdatesPrompted", "true");
+			return;
+		}
+
+		const message = strings["prompt update check consent message"];
+		const shouldEnable = await confirm(strings?.confirm, message);
+		localStorage.setItem("checkForUpdatesPrompted", "true");
+		if (shouldEnable) {
+			await settings.update({ checkForAppUpdates: true }, false);
+		}
+	} catch (error) {
+		console.error("Failed to prompt for update check consent", error);
+	}
 }
 
 async function loadApp() {
@@ -492,6 +517,10 @@ async function loadApp() {
 	}
 
 	initFileList();
+
+	TerminalManager.restorePersistedSessions().catch((error) => {
+		console.error("Terminal restoration failed:", error);
+	});
 
 	/**
 	 *
